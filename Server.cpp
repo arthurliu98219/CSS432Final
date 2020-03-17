@@ -137,7 +137,7 @@ void prepareResponseData( bool isGET , string &statusCode)
     else
     {
         // Could not recognize the get request
-        statusCode = BAD_REQUEST_RESPONSE;
+        statusCode = "A player has joined the game.";
     }
 
 }
@@ -151,7 +151,7 @@ void *processGETRequest(void *threadData)
     string statusCode;
     prepareResponseData( isGET , statusCode);
     string response = statusCode;
-    cout << "Printing out the response " + response << endl;
+    cout << "Server: "+ response << endl;
     send(data->fileDesc , &response[ 0 ] , response.size() , 0);
     close(data->fileDesc);
     return 0;
@@ -159,6 +159,7 @@ void *processGETRequest(void *threadData)
 
 int main(int argumentNumber , char *argumentValues[])
 {
+    cout << "Waiting for players to join the game.." << endl;
     if ( argumentNumber != 2 ) // Change this to
     {
         cout << "Invalid number of argument. The program does not accept any argument at all";
