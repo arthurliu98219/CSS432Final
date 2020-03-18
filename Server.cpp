@@ -195,33 +195,46 @@ void *serverResponsePlayer(void *threadData)
     bool gameEnd = false;
     vector<int> cards;
     vector<int> playerOneCards;
-    vector<int> playerOneCards;
+    vector<int> playerTwoCards;
     while(playerOneJoined && playerTwoJoined){
         cout << "Starting Game.." << endl;
         //start by dealing the first card on the table
         int randomNum = rand() % 15;
         int card1 = rand() % 15;
         int card2 = rand() % 15;
+        int card3 = rand() % 15;
+        int card4 = rand() % 15;
         if(randomNum > 10){ //because there are 10, J , Q, and K which are all worth 10 points
-            randomNum == 10;
+            randomNum = 10;
         }
         if(card1 > 10){ //because there are 10, J , Q, and K which are all worth 10 points
-            randomNum == 10;
+            card1 = 10;
         }
         if(card2 > 10){ //because there are 10, J , Q, and K which are all worth 10 points
-            randomNum == 10;
+            card2 = 10;
+        }
+        if(card3 > 10){ //because there are 10, J , Q, and K which are all worth 10 points
+            card3 = 10;
+        }
+        if(card4 > 10){ //because there are 10, J , Q, and K which are all worth 10 points
+            card4 = 10;
         }
         cards.push_back(randomNum);
-        string message1 = "Current cards on table: " + to_string(randomNum) + ".";
+        string message = "Current cards on table: " + to_string(randomNum) + ".";
         send(playerOneSockFileDesc,&message[0],message.size(),0); // send message to player1
         send(playerTwoSockFileDesc,&message[0],message.size(),0); // send message to player2
 
+        cout << "Dealer is handing out individual cards" << endl;
         //send second message to each player with their own hand
-        string message1 = ""
-        send(playerOneSockFileDesc,&message[0],message.size(),0); // send message to player1
+        string message1 = "You have drawn a " + to_string(card1) + " and a " + to_string(card2)+".";
+        send(playerOneSockFileDesc,&message1[0],message1.size(),0); // send message to player1
+        playerOneCards.push_back(card1);
+        playerOneCards.push_back(card2);
 
-
-        send(playerTwoSockFileDesc,&message[0],message.size(),0); // send message to player2
+        string message2 = "You have drawn a " + to_string(card3) + " and a " + to_string(card4)+".";
+        send(playerTwoSockFileDesc,&message2[0],message2.size(),0); // send message to player2
+        playerOneCards.push_back(card3);
+        playerOneCards.push_back(card4);
 
 
         gameEnd = true;
@@ -234,10 +247,6 @@ void *serverResponsePlayer(void *threadData)
         }
     }
 
-
-    string response = " "; //this is what the server will send back to the player
-    cout << "Server: "+ response << endl;
-    send(data->fileDesc , &response[ 0 ] , response.size() , 0);
     //close(data->fileDesc);
     return 0;
 }

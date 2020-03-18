@@ -157,6 +157,22 @@ string parseHeaderInfo(int socketFileDescriptor)
     return responseHeader;
 }
 
+string getSocketMessage(int socketFileDescriptor){
+    string responseHeader = "";
+    char lastChar = 0;
+    while ( true )
+    {
+        char currentChar = 0;
+        recv(socketFileDescriptor , &currentChar , 1 , 0);
+        if (currentChar == '.' ){
+            break;
+        }
+        else responseHeader += currentChar;
+        lastChar = currentChar;
+    }
+    return responseHeader;
+}
+
 int sendServerMove(int socketFileDescriptor)
 {
 
@@ -179,21 +195,17 @@ int sendServerMove(int socketFileDescriptor)
         cout << "Unable to send the player move to server.";
         return -1;
     }
-    //THIS IS CLIENT RECIEVING MESSAGE FROM SERVER
-    string responseHeader = "";
-    char lastChar = 0;
-    while ( true )
-    {
-        char currentChar = 0;
-        recv(socketFileDescriptor , &currentChar , 1 , 0);
-        if (currentChar == '.' ){
-                break;
-        }
-        else responseHeader += currentChar;
-        lastChar = currentChar;
-    }
 
-    cout << "Server: " + responseHeader << endl;
+
+    //THIS IS CLIENT RECIEVING MESSAGE FROM SERVER-----------------------------------------------------------------
+    cout << "getting table cards" << endl;
+    string serverResponse = getSocketMessage(socketFileDescriptor);//get table cards
+    cout << "Server: " + serverResponse << endl;
+
+    cout << "getting player cards" << endl;
+    serverResponse = getSocketMessage(socketFileDescriptor);//get player hand cards
+    cout << "Current Player: " + serverResponse << endl;
+
     return 0;
 
 }
