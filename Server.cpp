@@ -5,6 +5,11 @@
 #include <netdb.h>
 #include <unistd.h>
 #include <fstream>
+#include<vector>
+#include <stdlib.h>
+
+
+const int CONNECTION_REQUEST_SIZE = 10;
 //rule: no insurance, no double, no split, no surrender
 
 bool playerOneJoined;
@@ -108,6 +113,7 @@ void Server::startRound()
 
 void prepareResponseData( bool isGET , string &statusCode)
 {
+    /*
     cout << "Server calculating round..." << endl;
     if ( isGET )
     {
@@ -121,6 +127,7 @@ void prepareResponseData( bool isGET , string &statusCode)
         // Could not recognize the get request
         statusCode = "Unknown Move from Player.";
     }
+     */
 
 }
 
@@ -186,7 +193,37 @@ void *serverResponsePlayer(void *threadData)
 
     //this is the game loop where the game truly starts between the two players
     bool gameEnd = false;
-    while(true){
+    vector<int> cards;
+    vector<int> playerOneCards;
+    vector<int> playerOneCards;
+    while(playerOneJoined && playerTwoJoined){
+        cout << "Starting Game.." << endl;
+        //start by dealing the first card on the table
+        int randomNum = rand() % 15;
+        int card1 = rand() % 15;
+        int card2 = rand() % 15;
+        if(randomNum > 10){ //because there are 10, J , Q, and K which are all worth 10 points
+            randomNum == 10;
+        }
+        if(card1 > 10){ //because there are 10, J , Q, and K which are all worth 10 points
+            randomNum == 10;
+        }
+        if(card2 > 10){ //because there are 10, J , Q, and K which are all worth 10 points
+            randomNum == 10;
+        }
+        cards.push_back(randomNum);
+        string message1 = "Current cards on table: " + to_string(randomNum) + ".";
+        send(playerOneSockFileDesc,&message[0],message.size(),0); // send message to player1
+        send(playerTwoSockFileDesc,&message[0],message.size(),0); // send message to player2
+
+        //send second message to each player with their own hand
+        string message1 = ""
+        send(playerOneSockFileDesc,&message[0],message.size(),0); // send message to player1
+
+
+        send(playerTwoSockFileDesc,&message[0],message.size(),0); // send message to player2
+
+
         gameEnd = true;
 
 
@@ -280,7 +317,6 @@ int main(int argumentNumber , char *argumentValues[])
         struct thread data;
         data.id = count;
         data.fileDesc = clientFileDescriptor;
-        cout << THREAD_MESSAGE + to_string(count) << endl;
         // Spawn a thread to do the work
         int threadResult = pthread_create(&new_thread , nullptr , serverResponsePlayer , (void *) &data);
         if ( threadResult != 0 )

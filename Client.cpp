@@ -11,6 +11,7 @@ using namespace std;
 char *serverName;
 Client c;
 bool joinedGame;
+bool currentTurn;
 
 //this is where the client will play singleplayer by themselves if they wish to do so
 void Client::singlePlayerGameLoop(){
@@ -178,18 +179,21 @@ int sendServerMove(int socketFileDescriptor)
         cout << "Unable to send the player move to server.";
         return -1;
     }
-    int length = 0;
+    //THIS IS CLIENT RECIEVING MESSAGE FROM SERVER
+    string responseHeader = "";
+    char lastChar = 0;
     while ( true )
     {
-        string responseHeader = parseHeaderInfo(socketFileDescriptor);
-        if ( responseHeader == "" ) break; // This can only happen when double \r\n\r\n that represent the end of header
-        cout << responseHeader << endl;
-        if ( responseHeader.substr(0 , 15) == "Content-Length:" )
-        {
-            length = atoi(responseHeader.substr(
-                    16 , responseHeader.length()).c_str()); // Parse the number of byte that will be in the body of the message
+        char currentChar = 0;
+        recv(socketFileDescriptor , &currentChar , 1 , 0);
+        if (currentChar == '.' ){
+                break;
         }
+        else responseHeader += currentChar;
+        lastChar = currentChar;
     }
+
+    cout << "Server: " + responseHeader << endl;
     return 0;
 
 }
