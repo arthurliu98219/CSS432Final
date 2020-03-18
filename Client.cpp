@@ -16,11 +16,138 @@ bool currentTurn;
 //this is where the client will play singleplayer by themselves if they wish to do so
 void Client::singlePlayerGameLoop(){
     cout << "Starting single player mode." << endl;
-}
+    string playerMove;
+    cout << "Please enter your name: " << endl;
+    string username;
+    cin >> username;
+    cout << "Welcome "+username+" to Blackjack." << endl << endl;
 
-Client::Client()
-{
+    bool gameEnd = false;
+    while(true){
+        bool gameEnd = false;
+        vector<int> cards;
+        vector<int> playerOneCards;
+        vector<int> playerTwoCards;
+        vector<int> dealerCards;
+        string possibleCards[13] = {"A", "2", "3", "4", "5", "6", "7", "8", "9", "10", "J", "Q", "K"}; //All possible cards
+            cout << "Starting Game.." << endl;
+            //start by dealing the first card on the table
+            srand(time(0));
+            int dealerCard1 = rand() % 13;
+            int dealerCard2 = rand() %
+                              13; //this card is hidden from the players and will only be revealed once players exceed combined amount.
+            int card1 = rand() % 13;
+            int card2 = rand() % 13;
+            if (dealerCard1 > 10) { //because there are 10, J , Q, and K which are all worth 10 points
+                dealerCard1 = 10;
+            }
+            if (card1 > 10) { //because there are 10, J , Q, and K which are all worth 10 points
+                card1 = 10;
+            }
+            if (card2 > 10) { //because there are 10, J , Q, and K which are all worth 10 points
+                card2 = 10;
+            }
+            cards.push_back(dealerCard1);
+            string message = "Dealers first card: " + possibleCards[dealerCard1] + ".";
+            //add to dealer card stack
+            dealerCards.push_back(dealerCard1);
 
+            //send message of 1st dealer card to players
+            cout << message << endl;
+
+            //send second message to each player with their own hand
+            string message1 = "You have drawn a " + possibleCards[card1] + " and a " + possibleCards[card2] + ".";
+            cout << message1 << endl;
+            playerOneCards.push_back(card1);
+            playerOneCards.push_back(card2);
+
+
+            int dealerTotal = 0;
+            while(true) {//loop for current game
+
+                //waiting to see if player will HIT or STAND--------------------------------------------------------------
+                int cardTemp;
+                string playerOneMove;
+                cout << "Enter '1' to HIT, enter '2' to STAND" << endl;
+                while(true) {
+                    cin >> playerOneMove;
+                    if (playerOneMove == "1" || playerOneMove == "2") {
+                        break;
+                    }
+                }
+                if (playerOneMove == "1") { //1 = HIT, 2 = STAND
+                    cout << username + " has decided to hit." << endl;
+                    cardTemp = rand() % 13;
+                    playerOneCards.push_back(cardTemp);
+                    //send player message on which card they had drawn.
+                    string temp = "You have drawn a " + possibleCards[cardTemp] + ".";
+                    cout << temp << endl;
+                } else {
+                    cout << username + " has decided to stand." << endl;
+                }
+
+
+
+                for(int i = 0;i<dealerCards.size();i++){
+                    dealerTotal+=dealerCards[i]+1;
+                }
+
+
+                if(dealerTotal < 17){// if dealer has less than 17 the dealer will HIT
+                    cardTemp = rand() % 13;
+                    dealerTotal += cardTemp + 1;
+                    message = "Dealer has decided to hit.";
+                }else{
+                    message = "Dealer has decided to stand.";
+                }
+                //send dealer actino to players
+                cout << message << endl;//this is message to server console to keep track of the game
+
+                //game check to see if someone has lost------------------------------------------------------------
+
+                //player1 check
+                int playerOneTotal = 0;
+                for (int i = 0; i < playerOneCards.size(); i++) {
+                    playerOneTotal += playerOneCards[i] + 1; //add one for index disparity
+                    //cout << "1adding " <<playerOneCards[i] << " to " +playerOneName + " total count." << endl;
+                }
+
+                //if someone has lost then send endgame message to player-------------------------------------
+
+                string dealerInfo;
+                if (playerOneTotal > 21 || dealerTotal == 21) { //losing from total amount
+                    message = "dealer total is "+to_string(dealerTotal)+".";//you = lose
+                    cout << "Game over, you have lost." << endl;
+                    gameEnd = true;
+                    cout << message << endl;
+                } else if (((playerOneTotal > dealerTotal) && (dealerTotal > 17)) || (dealerTotal > 21)) {
+                    message = "dealer total is "+to_string(dealerTotal)+".";//you win
+                    cout << "Congratulations on beating the dealer!" << endl;
+                    gameEnd = true;
+                    cout << message << endl;
+                }
+
+                if(gameEnd) {
+                    break;
+                }
+            }
+            gameEnd = false;
+            cout << "Do you want to keep playing? Enter '1' to keep playing, enter '2' to quit." << endl;
+            while(true){
+                string option;
+                cin >> option;
+                if(option == "1"){
+                    break;
+                }else if(option == "2"){
+                    gameEnd = true;
+                    exit(0);
+                }
+            }
+
+        if(gameEnd){
+            break;
+        }
+    }
 }
 
 void Client::placeBets()
@@ -100,6 +227,10 @@ void Client::processDealer()
     }
     cout << "dealer score:" << countCards(dealerCards) << endl;
     dealerScore = countCards(dealerCards);
+}
+
+Client ::Client(){
+
 }
 
 int Client::countCards(vector <string> temp)
@@ -199,55 +330,81 @@ int sendServerMove(int socketFileDescriptor)
 
 
     //THIS IS CLIENT RECIEVING MESSAGE FROM SERVER-----------------------------------------------------------------
+    while(true) {
+        cout << "getting table cards" << endl;
+        string serverResponse = getSocketMessage(socketFileDescriptor);//get table cards
+        cout << "Server: " + serverResponse << endl;
 
+        cout << "getting player cards" << endl;
+        serverResponse = getSocketMessage(socketFileDescriptor);//get player hand cards
+        cout << "Current Player: " + serverResponse << endl;
 
-    cout << "getting table cards" << endl;
-    string serverResponse = getSocketMessage(socketFileDescriptor);//get table cards
-    cout << "Server: " + serverResponse << endl;
+        while (true) {//game loop for current game
+            //Server will ask client to hit or stand based on their current cards
+            cout << "Enter '1' to HIT or enter '2' to STAND" << endl;
+            string option = "";
+            while (true) {
+                cin >> option;
 
-    cout << "getting player cards" << endl;
-    serverResponse = getSocketMessage(socketFileDescriptor);//get player hand cards
-    cout << "Current Player: " + serverResponse << endl;
+                if (option == "1") {// if HIT pick up card from server
+                    cout << "You have chosen to HIT" << endl;
+                    option += ".";
+                    send(socketFileDescriptor, option.c_str(), strlen(option.c_str()), 0);//send option to hit to server
+                    serverResponse = getSocketMessage(socketFileDescriptor);//getting your card when hit
+                    cout << serverResponse << endl;
+                    break;
+                } else if (option == "2") {
+                    cout << "You have chosen to STAND" << endl;
+                    option += ".";//still have to send message even if the player decides to stand
+                    send(socketFileDescriptor, option.c_str(), strlen(option.c_str()), 0);//send option to hit to server
+                    break;
+                } else {
+                    cout << "Please enter a valid option and try again." << endl;
+                }
+            }
 
-    while(true) {//game loop for current game
-        //Server will ask client to hit or stand based on their current cards
-        cout << "Enter '1' to HIT or enter '2' to STAND" << endl;
-        string option = "";
-        while (true) {
-            cin >> option;
+            serverResponse = getSocketMessage(socketFileDescriptor);
+            cout << serverResponse << endl;
 
-            if (option == "1") {// if HIT pick up card from server
-                cout << "You have chosen to HIT" << endl;
-                option += ".";
-                send(socketFileDescriptor, option.c_str(), strlen(option.c_str()), 0);//send option to hit to server
-                serverResponse = getSocketMessage(socketFileDescriptor);//getting your card when hit
-                cout << serverResponse << endl;
+            //THIS IS CLIENT CHECKING TO SEE IF PLAYER HAS LOST THE GAME
+            serverResponse = getSocketMessage(socketFileDescriptor);
+            if (serverResponse[0] ==
+                '1') {//server will check to make sure it will be 1 or 2 so dont need to check for other responses
+                cout << serverResponse.substr(1, serverResponse.length()) << endl;
+                cout << "Game over, you have lost." << endl;
                 break;
-            } else if (option == "2") {
-                cout << "You have chosen to STAND" << endl;
-                option += ".";//still have to send message even if the player decides to stand
-                send(socketFileDescriptor, option.c_str(), strlen(option.c_str()), 0);//send option to hit to server
+            } else if (serverResponse[0] == '2') {
+                cout << serverResponse.substr(1, serverResponse.length()) << endl;
+                cout << "Congratulations on beating the dealer!" << endl;
                 break;
-            } else {
-                cout << "Please enter a valid option and try again." << endl;
             }
         }
+        cout << "The game will now exit" << endl;
+        exit(0);
 
-        serverResponse = getSocketMessage(socketFileDescriptor);
-        cout << serverResponse << endl;
 
-        //THIS IS CLIENT CHECKING TO SEE IF PLAYER HAS LOST THE GAME
-        serverResponse = getSocketMessage(socketFileDescriptor);
-        cout << "message win/lose: " << serverResponse << endl;
-        if (serverResponse[0] =='1') {//server will check to make sure it will be 1 or 2 so dont need to check for other responses
-            cout << serverResponse.substr(1,serverResponse.length()) << endl;
-            cout << "Game over, you have lost." << endl;
-            break;
-        } else if (serverResponse[0] == '2') {
-            cout << serverResponse.substr(1,serverResponse.length()) << endl;
-            cout << "Congratulations on beating the dealer!" << endl;
+        /* //unable to implement exit game loop for some reason
+        cout << "Do you want to play again? Enter '1' to play again, enter '2' to quit" << endl;
+        string option;
+            cin >> option;
+            if (option == "1") {
+                cout << "You have chosen to play again." << endl;
+            } else {
+                cout << "You have chosen to quit." << endl;
+                exit(0);
+            }
+        send(socketFileDescriptor, option.c_str(), strlen(option.c_str()), 0);
+
+        string message = getSocketMessage(socketFileDescriptor);
+
+        if (message[0] == '1') {
+            cout << message.substr(1,message.length()) << endl;
+        }else{
+            cout << message.substr(1,message.length()) << endl;
             break;
         }
+*/
+
     }
     return 0;
 

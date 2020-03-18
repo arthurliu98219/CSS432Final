@@ -309,7 +309,6 @@ void *serverResponsePlayer(void *threadData) {
             //if someone has lost then send endgame message to player-------------------------------------
             cout << "Dealer total is: " << dealerTotal << endl;
             string dealerInfo;
-            cout << "player1 total is: " <<playerOneTotal << endl;
             if (playerOneTotal > 21 || dealerTotal == 21) { //losing from total amount
                 message = "1 dealer has drawn a "+to_string(dealerTotal)+".";//1 = lose
                 gameEnd = true;
@@ -326,11 +325,10 @@ void *serverResponsePlayer(void *threadData) {
 
 
             if (playerTwoTotal > 21 || dealerTotal == 21) { //losing from total amount
-                message = "1 dealer has drawn a "+to_string(dealerTotal)+".";//1 = lose
+                message = "1dealer has drawn a "+to_string(dealerTotal)+".";//1 = lose
                 gameEnd = true;
-
             } else if(((playerOneTotal > dealerTotal) && (dealerTotal > 17)) || (dealerTotal > 21)){
-                message = "2 dealer has drawn a "+to_string(dealerTotal)+".";// dealer lose
+                message = "2dealer has drawn a "+to_string(dealerTotal)+".";// dealer lose
                 gameEnd = true;
             } else {
                 message = "3."; //2 = able to keep playing
@@ -345,11 +343,31 @@ void *serverResponsePlayer(void *threadData) {
                 break;
             }
         }
-
+        cout << "Game is over, server will now close" << endl;
+        exit(0);
+        //ask if players want to play again-----------------------------------------
+        /*
+        cout << "getting options" << endl;
+        string option1 = getSocketMessage(playerOneSockFileDesc);
+        string option2 = getSocketMessage(playerTwoSockFileDesc);
+        cout << "option: " << option1 << endl;
+        cout << "option2: " << option2 << endl;
+        if(option1 == "1" && option2 == "1"){
+            message = "1Both players want to play again.";
+            cout << message << endl;
+            gameEnd = false;
+        }else{
+            message = "2One player has quit the game, the game will now end. \n";
+            cout << message << endl;
+            gameEnd = true;
+        }
+        send(playerOneSockFileDesc, &message[0], message.size(), 0); //send msg for player2
+        send(playerTwoSockFileDesc, &message[0], message.size(), 0); //send msg for player2
 
         if(gameEnd){
             break;
         }
+         */
     }
 
     //close(data->fileDesc);
@@ -367,8 +385,8 @@ int main(int argumentNumber , char *argumentValues[])
         cout << "Invalid number of argument. The program does not accept any argument at all";
         return -1;
     }
-    struct addrinfo hints; // define how the server will be configure
-    struct addrinfo *serverInfo; // used to store all the connections that the server can use
+    struct addrinfo hints;
+    struct addrinfo *serverInfo;
     memset(&hints , 0 , sizeof(hints));
     hints.ai_family = AF_INET; // IPv4 or v6
     hints.ai_socktype = SOCK_STREAM;
@@ -377,7 +395,7 @@ int main(int argumentNumber , char *argumentValues[])
     if ( addressInfoStatus != 0 )
     {
         cout << "Unable to connect";
-        cout << gai_strerror(addressInfoStatus); // print out error message
+        cout << gai_strerror(addressInfoStatus);
         return -1;
     }
     int socketFileDescriptor;
@@ -390,7 +408,6 @@ int main(int argumentNumber , char *argumentValues[])
                                       possibleConnection->ai_protocol);
         if ( socketFileDescriptor == -1 )
         {
-            cout << "Invalid one socket file descriptor detected. Looking for next one";
             continue;
         }
         int optionValue = 1;
@@ -398,7 +415,7 @@ int main(int argumentNumber , char *argumentValues[])
         serverBindResult = bind(socketFileDescriptor , possibleConnection->ai_addr , possibleConnection->ai_addrlen);
         if ( serverBindResult == -1 )
         {
-            cout << "Unable to bind to the socket using this file descriptior";
+            cout << "Unable to bind to the socket.";
             close(socketFileDescriptor);
             continue;
         }
@@ -406,7 +423,7 @@ int main(int argumentNumber , char *argumentValues[])
     }
     if ( possibleConnection == NULL )
     {
-        cout << "Unable to connect or empty result was given";
+        cout << "Unable to connect.";
         return -1;
     }
     freeaddrinfo(serverInfo);
@@ -414,29 +431,27 @@ int main(int argumentNumber , char *argumentValues[])
     int listenUsingSocketResult = listen(socketFileDescriptor , CONNECTION_REQUEST_SIZE);
     if ( listenUsingSocketResult != 0 )
     {
-        cout << "Unable to listen using the socket file descriptor";
+        cout << "Socket file desc error.";
         return -1;
     }
     int count = 1;
-    // Keep looping and listening to possible connection
+    //Keep looking for connections
     while ( true ){
         struct sockaddr_storage clientSocket;
         socklen_t clientSocketSize = sizeof(clientSocket);
         int clientFileDescriptor = accept(socketFileDescriptor , (struct sockaddr *) &clientSocket , &clientSocketSize);
         if ( clientFileDescriptor == -1 )
         {
-            cout << "Unable to connect to client. Trying again" << endl;
+            cout << "Unable to connect to client." << endl;
             continue;
         }
         pthread_t new_thread;
         struct thread data;
         data.id = count;
         data.fileDesc = clientFileDescriptor;
-        // Spawn a thread to do the work
         int threadResult = pthread_create(&new_thread , nullptr , serverResponsePlayer , (void *) &data);
         if ( threadResult != 0 )
         {
-            cout << "Thread error, please retry." << endl;
             continue;
         }
         count++;
