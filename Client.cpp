@@ -10,6 +10,7 @@ using namespace std;
 
 char *serverName;
 Client c;
+bool joinedGame;
 
 //this is where the client will play singleplayer by themselves if they wish to do so
 void Client::singlePlayerGameLoop(){
@@ -147,15 +148,34 @@ void Client::startRound()
     processDealer();
 }
 
-int sendServerInfo(int socketFileDescriptor)
+string parseHeaderInfo(int socketFileDescriptor)
 {
-    string request = string("GET " + string(fileName) + " HTTP/1.1\r\n" +"Host: " + string(serverName) + "\r\n" +"\r\n"); // a get request is ended with a "\r\n\r\n"
-    cout << "This request was made : " << endl;
-    cout << request << endl;
-    int sendResult = send(socketFileDescriptor , request.c_str() , strlen(request.c_str()) , 0);
+    string responseHeader = "";
+    char currentChar = 0;
+    recv(socketFileDescriptor , &currentChar , 1 , 0);
+    return responseHeader;
+}
+
+int sendServerMove(int socketFileDescriptor)
+{
+
+    string playerMove;
+    if(joinedGame == false){
+        cout << "Please enter your name: " << endl;
+        string username;
+        cin >> username;
+        playerMove = username +" has joined the game.";
+    }else{
+
+        cout << "Sending move to Server: " << endl;
+    }
+
+    cout << playerMove << endl;
+    playerMove = "1" + playerMove;
+    int sendResult = send(socketFileDescriptor , playerMove.c_str() , strlen(playerMove.c_str()) , 0);
     if ( sendResult <= 0 )
     {
-        cout << "Unable to send the request";
+        cout << "Unable to send the player move to server.";
         return -1;
     }
     int length = 0;
@@ -170,9 +190,6 @@ int sendServerInfo(int socketFileDescriptor)
                     16 , responseHeader.length()).c_str()); // Parse the number of byte that will be in the body of the message
         }
     }
-
-
-    outputFile.close();
     return 0;
 
 }
@@ -242,7 +259,8 @@ void Client::multiPlayerGameLoop(char *const *args){
     if ( sockFileDesc == -1 ){
         cout << "Unable to create a socket";
     }
-
+    //test
+    sendServerMove(sockFileDesc);
 
 }
 
@@ -257,6 +275,7 @@ int main(int argumentNumber , char *args[]) {
             c.singlePlayerGameLoop();
             break;
         } else if (answer == "2") {
+            joinedGame = false;
             cout << "You have chosen multiplayer mode." << endl;
             c.multiPlayerGameLoop(args);
             break;

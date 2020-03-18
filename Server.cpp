@@ -7,13 +7,13 @@
 #include <fstream>
 //rule: no insurance, no double, no split, no surrender
 
-const string THREAD_MESSAGE = "Creating new thread with count: ";
-const int CONNECTION_REQUEST_SIZE = 10;
-const string OK_RESPONSE = "HTTP/1.1 200 OK\r\n"; //this represents a player hit
-const string DOES_NOT_EXIST_RESPONSE = "HTTP/1.1 404 Not Found\r\n"; //this represents a player stay
-const string UNAUTHORIZED_RESPONSE = "HTTP/1.1 401 Unauthorized\r\n";
-const string FORBIDDEN_RESPONSE = "HTTP/1.1 403 Forbidden\r\n";
-const string BAD_REQUEST_RESPONSE = "HTTP/1.1 400 Bad Request\r\n";
+bool playerOneJoined;
+string playerOneName;
+int playerOneSockFileDesc;
+
+bool playerTwoJoined;
+string playerTwoName;
+int playerTwoSockFileDesc;
 
 using namespace std;
 
@@ -105,27 +105,10 @@ void Server::startRound()
 }
 //---------------------------------------------------------------
 //---------------------------------------------------------------
-string parseHeaderInfo(int socketFileDescriptor)
-{
-    string responseHeader = "";
-    char lastChar = 0;
-    while ( true )
-    {
-        char currentChar = 0;
-        recv(socketFileDescriptor , &currentChar , 1 , 0);
-        if ( currentChar == '\n' || currentChar == '\r' )
-        {
-            if ( lastChar == '\r' && currentChar == '\n' ) // For each header, it is ended with a \r\n
-                break;
-        }
-        else responseHeader += currentChar;
-        lastChar = currentChar;
-    }
-    return responseHeader;
-}
 
 void prepareResponseData( bool isGET , string &statusCode)
 {
+    cout << "Server calculating round..." << endl;
     if ( isGET )
     {
         if(statusCode == OK_RESPONSE){
@@ -134,31 +117,98 @@ void prepareResponseData( bool isGET , string &statusCode)
             cout << "Player has decided to stay. Next turn." << endl;
         }
     }
-    else
-    {
+    else{
         // Could not recognize the get request
-        statusCode = "A player has joined the game.";
+        statusCode = "Unknown Move from Player.";
     }
 
 }
 
-void *processGETRequest(void *threadData)
+void *serverResponsePlayer(void *threadData)
 {
     struct thread *data;
     data = (struct thread *) threadData;
     bool isGET = false;
-   //work in progress waiting for client to work
+
+    //parses response from client
+    string responseHeader = "";
+    char lastChar = 0;
+    bool lookForName = false;
+    string currentName = "";
+    while (true)
+    {
+        char currentChar = 0;
+        recv(data->fileDesc , &currentChar , 1 , 0);
+        if(lookForName && currentChar != '1'){
+            if(currentChar == ' '){
+                lookForName = false;
+            }else{
+                currentName+=currentChar;
+            }
+
+        }
+        if(currentChar =='1'){
+            lookForName = true;
+        }
+        if ( currentChar == '.' )
+        {
+                break;
+        }
+        else responseHeader += currentChar;
+        lastChar = currentChar;
+    }
+    cout << "This is what the server recieved: " + responseHeader << endl;
     string statusCode;
-    prepareResponseData( isGET , statusCode);
-    string response = statusCode;
+    //server will reply to player
+
+    //this is for when the 2 players initially join
+    cout << "current player name is: " +currentName << endl;
+    if(playerOneJoined == false){
+        playerOneName = currentName;
+        playerOneSockFileDesc = data->fileDesc;
+        playerOneJoined = true;
+    }else if(playerTwoJoined == false){
+        playerTwoName = currentName;
+        playerTwoSockFileDesc = data->fileDesc;
+        playerTwoJoined = true;
+    }
+    cout << "Current Players in game(limited to two):" << endl;
+    if(playerOneJoined){
+        cout << "1. "+playerOneName << endl;
+    }
+    if(playerTwoJoined){
+        cout << "2. "+playerTwoName << endl;
+    }
+
+    if(responseHeader[0] == '1'){ //if response starts with a one then a player has joined the game
+        cout << responseHeader.substr(1,responseHeader.length()) << endl;
+    }
+
+    //this is the game loop where the game truly starts between the two players
+    bool gameEnd = false;
+    while(true){
+        gameEnd = true;
+
+
+
+
+        if(gameEnd){
+            break;
+        }
+    }
+
+
+    string response = " "; //this is what the server will send back to the player
     cout << "Server: "+ response << endl;
     send(data->fileDesc , &response[ 0 ] , response.size() , 0);
-    close(data->fileDesc);
+    //close(data->fileDesc);
     return 0;
 }
 
 int main(int argumentNumber , char *argumentValues[])
 {
+    playerOneJoined = false;
+    playerTwoJoined = false;
     cout << "Waiting for players to join the game.." << endl;
     if ( argumentNumber != 2 ) // Change this to
     {
@@ -232,7 +282,7 @@ int main(int argumentNumber , char *argumentValues[])
         data.fileDesc = clientFileDescriptor;
         cout << THREAD_MESSAGE + to_string(count) << endl;
         // Spawn a thread to do the work
-        int threadResult = pthread_create(&new_thread , nullptr , processGETRequest , (void *) &data);
+        int threadResult = pthread_create(&new_thread , nullptr , serverResponsePlayer , (void *) &data);
         if ( threadResult != 0 )
         {
             cout << "Thread error, please retry." << endl;
