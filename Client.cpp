@@ -164,6 +164,7 @@ string getSocketMessage(int socketFileDescriptor){
     {
         char currentChar = 0;
         recv(socketFileDescriptor , &currentChar , 1 , 0);
+        //cout << "client currently reading: " << currentChar << endl;//used for debugging
         if (currentChar == '.' ){
             break;
         }
@@ -198,6 +199,8 @@ int sendServerMove(int socketFileDescriptor)
 
 
     //THIS IS CLIENT RECIEVING MESSAGE FROM SERVER-----------------------------------------------------------------
+
+
     cout << "getting table cards" << endl;
     string serverResponse = getSocketMessage(socketFileDescriptor);//get table cards
     cout << "Server: " + serverResponse << endl;
@@ -206,6 +209,46 @@ int sendServerMove(int socketFileDescriptor)
     serverResponse = getSocketMessage(socketFileDescriptor);//get player hand cards
     cout << "Current Player: " + serverResponse << endl;
 
+    while(true) {//game loop for current game
+        //Server will ask client to hit or stand based on their current cards
+        cout << "Enter '1' to HIT or enter '2' to STAND" << endl;
+        string option = "";
+        while (true) {
+            cin >> option;
+
+            if (option == "1") {// if HIT pick up card from server
+                cout << "You have chosen to HIT" << endl;
+                option += ".";
+                send(socketFileDescriptor, option.c_str(), strlen(option.c_str()), 0);//send option to hit to server
+                serverResponse = getSocketMessage(socketFileDescriptor);//getting your card when hit
+                cout << serverResponse << endl;
+                break;
+            } else if (option == "2") {
+                cout << "You have chosen to STAND" << endl;
+                option += ".";//still have to send message even if the player decides to stand
+                send(socketFileDescriptor, option.c_str(), strlen(option.c_str()), 0);//send option to hit to server
+                break;
+            } else {
+                cout << "Please enter a valid option and try again." << endl;
+            }
+        }
+
+        serverResponse = getSocketMessage(socketFileDescriptor);
+        cout << serverResponse << endl;
+
+        //THIS IS CLIENT CHECKING TO SEE IF PLAYER HAS LOST THE GAME
+        serverResponse = getSocketMessage(socketFileDescriptor);
+        cout << "message win/lose: " << serverResponse << endl;
+        if (serverResponse[0] =='1') {//server will check to make sure it will be 1 or 2 so dont need to check for other responses
+            cout << serverResponse.substr(1,serverResponse.length()) << endl;
+            cout << "Game over, you have lost." << endl;
+            break;
+        } else if (serverResponse[0] == '2') {
+            cout << serverResponse.substr(1,serverResponse.length()) << endl;
+            cout << "Congratulations on beating the dealer!" << endl;
+            break;
+        }
+    }
     return 0;
 
 }

@@ -7,6 +7,8 @@
 #include <fstream>
 #include<vector>
 #include <stdlib.h>
+#include <stdio.h>
+#include<time.h>
 
 
 const int CONNECTION_REQUEST_SIZE = 10;
@@ -111,28 +113,23 @@ void Server::startRound()
 //---------------------------------------------------------------
 //---------------------------------------------------------------
 
-void prepareResponseData( bool isGET , string &statusCode)
-{
-    /*
-    cout << "Server calculating round..." << endl;
-    if ( isGET )
+string getSocketMessage(int socketFileDescriptor){
+    string responseHeader = "";
+    char lastChar = 0;
+    while ( true )
     {
-        if(statusCode == OK_RESPONSE){
-            cout << "Player has hit, draw next card." << endl;
-        }else if(statusCode == DOES_NOT_EXIST_RESPONSE){
-            cout << "Player has decided to stay. Next turn." << endl;
+        char currentChar = 0;
+        recv(socketFileDescriptor , &currentChar , 1 , 0);
+        if (currentChar == '.' ){
+            break;
         }
+        else responseHeader += currentChar;
+        lastChar = currentChar;
     }
-    else{
-        // Could not recognize the get request
-        statusCode = "Unknown Move from Player.";
-    }
-     */
-
+    return responseHeader;
 }
 
-void *serverResponsePlayer(void *threadData)
-{
+void *serverResponsePlayer(void *threadData) {
     struct thread *data;
     data = (struct thread *) threadData;
     bool isGET = false;
@@ -142,26 +139,23 @@ void *serverResponsePlayer(void *threadData)
     char lastChar = 0;
     bool lookForName = false;
     string currentName = "";
-    while (true)
-    {
+    while (true) {
         char currentChar = 0;
-        recv(data->fileDesc , &currentChar , 1 , 0);
-        if(lookForName && currentChar != '1'){
-            if(currentChar == ' '){
+        recv(data->fileDesc, &currentChar, 1, 0);
+        if (lookForName && currentChar != '1') {
+            if (currentChar == ' ') {
                 lookForName = false;
-            }else{
-                currentName+=currentChar;
+            } else {
+                currentName += currentChar;
             }
 
         }
-        if(currentChar =='1'){
+        if (currentChar == '1') {
             lookForName = true;
         }
-        if ( currentChar == '.' )
-        {
-                break;
-        }
-        else responseHeader += currentChar;
+        if (currentChar == '.') {
+            break;
+        } else responseHeader += currentChar;
         lastChar = currentChar;
     }
     cout << "This is what the server recieved: " + responseHeader << endl;
@@ -169,26 +163,26 @@ void *serverResponsePlayer(void *threadData)
     //server will reply to player
 
     //this is for when the 2 players initially join
-    cout << "current player name is: " +currentName << endl;
-    if(playerOneJoined == false){
+    cout << "current player name is: " + currentName << endl;
+    if (playerOneJoined == false) {
         playerOneName = currentName;
         playerOneSockFileDesc = data->fileDesc;
         playerOneJoined = true;
-    }else if(playerTwoJoined == false){
+    } else if (playerTwoJoined == false) {
         playerTwoName = currentName;
         playerTwoSockFileDesc = data->fileDesc;
         playerTwoJoined = true;
     }
     cout << "Current Players in game(limited to two):" << endl;
-    if(playerOneJoined){
-        cout << "1. "+playerOneName << endl;
+    if (playerOneJoined) {
+        cout << "1. " + playerOneName << endl;
     }
-    if(playerTwoJoined){
-        cout << "2. "+playerTwoName << endl;
+    if (playerTwoJoined) {
+        cout << "2. " + playerTwoName << endl;
     }
 
-    if(responseHeader[0] == '1'){ //if response starts with a one then a player has joined the game
-        cout << responseHeader.substr(1,responseHeader.length()) << endl;
+    if (responseHeader[0] == '1') { //if response starts with a one then a player has joined the game
+        cout << responseHeader.substr(1, responseHeader.length()) << endl;
     }
 
     //this is the game loop where the game truly starts between the two players
@@ -196,50 +190,161 @@ void *serverResponsePlayer(void *threadData)
     vector<int> cards;
     vector<int> playerOneCards;
     vector<int> playerTwoCards;
-    while(playerOneJoined && playerTwoJoined){
+    vector<int> dealerCards;
+    string possibleCards[13] = {"A", "2", "3", "4", "5", "6", "7", "8", "9", "10", "J", "Q", "K"}; //All possible cards
+
+    while (playerOneJoined && playerTwoJoined) {
         cout << "Starting Game.." << endl;
         //start by dealing the first card on the table
-        int randomNum = rand() % 15;
-        int card1 = rand() % 15;
-        int card2 = rand() % 15;
-        int card3 = rand() % 15;
-        int card4 = rand() % 15;
-        if(randomNum > 10){ //because there are 10, J , Q, and K which are all worth 10 points
-            randomNum = 10;
+        srand(time(0));
+        int dealerCard1 = rand() % 13;
+        int dealerCard2 = rand() %
+                          13; //this card is hidden from the players and will only be revealed once players exceed combined amount.
+        int card1 = rand() % 13;
+        int card2 = rand() % 13;
+        int card3 = rand() % 13;
+        int card4 = rand() % 13;
+        if (dealerCard1 > 10) { //because there are 10, J , Q, and K which are all worth 10 points
+            dealerCard1 = 10;
         }
-        if(card1 > 10){ //because there are 10, J , Q, and K which are all worth 10 points
+        if (card1 > 10) { //because there are 10, J , Q, and K which are all worth 10 points
             card1 = 10;
         }
-        if(card2 > 10){ //because there are 10, J , Q, and K which are all worth 10 points
+        if (card2 > 10) { //because there are 10, J , Q, and K which are all worth 10 points
             card2 = 10;
         }
-        if(card3 > 10){ //because there are 10, J , Q, and K which are all worth 10 points
+        if (card3 > 10) { //because there are 10, J , Q, and K which are all worth 10 points
             card3 = 10;
         }
-        if(card4 > 10){ //because there are 10, J , Q, and K which are all worth 10 points
+        if (card4 > 10) { //because there are 10, J , Q, and K which are all worth 10 points
             card4 = 10;
         }
-        cards.push_back(randomNum);
-        string message = "Current cards on table: " + to_string(randomNum) + ".";
-        send(playerOneSockFileDesc,&message[0],message.size(),0); // send message to player1
-        send(playerTwoSockFileDesc,&message[0],message.size(),0); // send message to player2
+        cards.push_back(dealerCard1);
+        string message = "Dealers first card: " + possibleCards[dealerCard1] + ".";
+        //add to dealer card stack
+        dealerCards.push_back(dealerCard1);
+
+        //send message of 1st dealer card to players
+        send(playerOneSockFileDesc, &message[0], message.size(), 0); // send message to player1
+        send(playerTwoSockFileDesc, &message[0], message.size(), 0); // send message to player2
 
         cout << "Dealer is handing out individual cards" << endl;
         //send second message to each player with their own hand
-        string message1 = "You have drawn a " + to_string(card1) + " and a " + to_string(card2)+".";
-        send(playerOneSockFileDesc,&message1[0],message1.size(),0); // send message to player1
+        string message1 = "You have drawn a " + possibleCards[card1] + " and a " + possibleCards[card2] + ".";
+        send(playerOneSockFileDesc, &message1[0], message1.size(), 0); // send message to player1
         playerOneCards.push_back(card1);
         playerOneCards.push_back(card2);
 
-        string message2 = "You have drawn a " + to_string(card3) + " and a " + to_string(card4)+".";
-        send(playerTwoSockFileDesc,&message2[0],message2.size(),0); // send message to player2
-        playerOneCards.push_back(card3);
-        playerOneCards.push_back(card4);
+        string message2 = "You have drawn a " + possibleCards[card3] + " and a " + possibleCards[card4] + ".";
+        send(playerTwoSockFileDesc, &message2[0], message2.size(), 0); // send message to player2
+        playerTwoCards.push_back(card3);
+        playerTwoCards.push_back(card4);
+
+        int dealerTotal = 0;
+        while(true) {//loop for current game
+
+            //waiting to see if player will HIT or STAND--------------------------------------------------------------
+            int cardTemp;
+            string playerOneMove = getSocketMessage(playerOneSockFileDesc);//grabbing player one's message
+            if (playerOneMove == "1") { //1 = HIT, 2 = STAND
+                cout << playerOneName + " has decided to hit." << endl;
+                cardTemp = rand() % 13;
+                playerOneCards.push_back(cardTemp);
+                //send player message on which card they had drawn.
+                string temp = "You have drawn a " + possibleCards[cardTemp] + ".";
+                send(playerOneSockFileDesc, &temp[0], temp.size(), 0);
+            } else {
+                cout << playerOneName + " has decided to stand." << endl;
+            }
+
+            string playerTwoMove = getSocketMessage(playerTwoSockFileDesc); //grabbing player twos message
+            if (playerTwoMove == "1") { //1 = HIT, 2 = STAND
+                cout << playerTwoName + " has decided to hit." << endl;
+                cardTemp = rand() % 13;
+                playerTwoCards.push_back(cardTemp);
+                //send player message which card they had drawn
+                string temp = "You have drawn a " + possibleCards[cardTemp] + ".";
+                send(playerTwoSockFileDesc, &temp[0], temp.size(), 0);
+            } else {
+                cout << playerTwoName + " has decided to stand." << endl;
+            }
+
+            for(int i = 0;i<dealerCards.size();i++){
+                dealerTotal+=dealerCards[i]+1;
+            }
 
 
-        gameEnd = true;
+            if(dealerTotal < 17){// if dealer has less than 17 the dealer will HIT
+                cardTemp = rand() % 13;
+                dealerTotal += cardTemp + 1;
+                message = "Dealer has decided to hit.";
+            }else{
+                message = "Dealer has decided to stand.";
+            }
+            //send dealer actino to players
+            send(playerOneSockFileDesc, &message[0], message.size(), 0); // send message to player1
+            send(playerTwoSockFileDesc, &message[0], message.size(), 0); // send message to player2
+            cout << message << endl;//this is message to server console to keep track of the game
+
+            //game check to see if someone has lost------------------------------------------------------------
+
+            //player1 check
+            int playerOneTotal = 0;
+            for (int i = 0; i < playerOneCards.size(); i++) {
+                playerOneTotal += playerOneCards[i] + 1; //add one for index disparity
+                //cout << "1adding " <<playerOneCards[i] << " to " +playerOneName + " total count." << endl;
+            }
+            cout << playerOneName + " total is: " << playerOneTotal << endl;
+
+            //player2 check
+            int playerTwoTotal = 0;
+            for (int i = 0; i < playerTwoCards.size(); i++) {
+                playerTwoTotal += playerTwoCards[i] + 1;
+                //cout << "2adding " <<playerTwoCards[i] << " to " +playerTwoName + " total count." << endl;
+            }
+            cout << playerTwoName + " total is: " << playerTwoTotal << endl;
 
 
+
+            //if someone has lost then send endgame message to player-------------------------------------
+            cout << "Dealer total is: " << dealerTotal << endl;
+            string dealerInfo;
+            cout << "player1 total is: " <<playerOneTotal << endl;
+            if (playerOneTotal > 21 || dealerTotal == 21) { //losing from total amount
+                message = "1 dealer has drawn a "+to_string(dealerTotal)+".";//1 = lose
+                gameEnd = true;
+            } else if (((playerOneTotal > dealerTotal) && (dealerTotal > 17)) || (dealerTotal > 21)) {
+                message = "2 dealer has drawn a "+to_string(dealerTotal)+".";// dealer lose
+                gameEnd = true;
+            } else {
+                message = "3."; //2 = able to keep playing
+
+            }
+
+            send(playerOneSockFileDesc, &message[0], message.size(), 0);//send msg for player1
+
+
+
+            if (playerTwoTotal > 21 || dealerTotal == 21) { //losing from total amount
+                message = "1 dealer has drawn a "+to_string(dealerTotal)+".";//1 = lose
+                gameEnd = true;
+
+            } else if(((playerOneTotal > dealerTotal) && (dealerTotal > 17)) || (dealerTotal > 21)){
+                message = "2 dealer has drawn a "+to_string(dealerTotal)+".";// dealer lose
+                gameEnd = true;
+            } else {
+                message = "3."; //2 = able to keep playing
+
+            }
+
+            cout << "message is: " + message << endl;
+            send(playerTwoSockFileDesc, &message[0], message.size(), 0); //send msg for player2
+
+
+            if(gameEnd) {
+                break;
+            }
+        }
 
 
         if(gameEnd){
@@ -250,6 +355,7 @@ void *serverResponsePlayer(void *threadData)
     //close(data->fileDesc);
     return 0;
 }
+
 
 int main(int argumentNumber , char *argumentValues[])
 {
